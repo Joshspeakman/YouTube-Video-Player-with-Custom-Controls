@@ -1,0 +1,201 @@
+<!--
+  YouTube Video Player with Custom Controls
+  =======================================
+  
+  A customizable YouTube video player component with:
+  - Custom play/pause button
+  - Automatic video cutoff at specified timestamp
+  - Responsive design with aspect ratio preservation
+  - Muted autoplay with unmute on user interaction
+  - Clean hover effects for controls
+  
+  Dependencies:
+  - YouTube IFrame API (loaded dynamically)
+  
+  Usage:
+  1. Include this HTML in your page
+  2. Change the YouTube video ID in the iframe src URL
+  3. Adjust the endTime variable to set your desired cutoff point (in seconds)
+  4. Customize styling as needed
+  
+  MIT License
+-->
+
+<header class="custom-video-header" style="overflow: hidden; background-color: black; position: relative; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+  <!-- Video container with aspect ratio preservation -->
+  <div id="video-container" style="position: relative; aspect-ratio: 4/3; overflow: hidden; border-radius: 10px; height: 140%; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);">
+    <!-- YouTube iframe - replace VIDEO_ID with your YouTube video ID -->
+    <iframe 
+      id="youtubeVideo"
+      src="https://www.youtube.com/embed/MqXZ1QDHGIs?enablejsapi=1&mute=1&controls=0&loop=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&showinfo=0&autoplay=1&end=120" 
+      frameborder="0" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allowfullscreen
+      style="position: absolute; top: 50%; left: 50%; width: 180%; height: 180%; transform: translate(-50%, -50%);"
+    ></iframe>
+    
+    <!-- Custom play/pause button with SVG icons -->
+    <button 
+      id="playPauseButton" 
+      style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 80px; height: 80px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: opacity 0.3s ease; opacity: 1;">
+      <!-- Play icon (triangle) -->
+      <svg id="playIcon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+      <!-- Pause icon (two vertical lines) -->
+      <svg id="pauseIcon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+        <line x1="6" y1="4" x2="6" y2="20"></line>
+        <line x1="18" y1="4" x2="18" y2="20"></line>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<script>
+/**
+ * YouTube Video Player Controller
+ * 
+ * This script initializes and controls a YouTube video player with custom UI and behavior:
+ * - Loads the YouTube IFrame API dynamically
+ * - Implements custom play/pause functionality
+ * - Handles video ending at a specific timestamp
+ * - Manages player states and UI updates
+ * - Implements hover effects for the controls
+ */
+(function() {
+  // Load YouTube IFrame API dynamically
+  var tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+  // Player variables
+  var player;                // YouTube player instance
+  var hasStarted = false;    // Flag to track if user has started playback with sound
+  var isPaused = true;       // Track pause state
+  var endTime = 120;         // Set end time in seconds (2 minutes)
+
+  // DOM element references
+  var videoContainer = document.getElementById('video-container');
+  var playPauseButton = document.getElementById('playPauseButton');
+  var playIcon = document.getElementById('playIcon');
+  var pauseIcon = document.getElementById('pauseIcon');
+
+  /**
+   * YouTube API callback - called automatically when API is ready
+   * Creates the player instance and sets up event listeners
+   */
+  window.onYouTubeIframeAPIReady = function() {
+    player = new YT.Player('youtubeVideo', {
+      events: {
+        'onStateChange': onPlayerStateChange,
+        'onReady': onPlayerReady
+      }
+    });
+  };
+
+  /**
+   * Called when player is ready
+   * Sets up timer to check video position and enforce end time
+   * @param {Object} event - YouTube player event
+   */
+  function onPlayerReady(event) {
+    // Set up interval to regularly check video position
+    setInterval(function() {
+      // Only check if player exists, has started, and is playing
+      if (player && player.getCurrentTime && hasStarted && !isPaused) {
+        var currentTime = player.getCurrentTime();
+        // If video reaches or exceeds end time, pause it
+        if (currentTime >= endTime) {
+          player.pauseVideo();
+          // Uncomment the following to auto-restart instead of pausing
+          // player.seekTo(0);
+          // isPaused = true;
+          // updatePlayPauseButton();
+        }
+      }
+    }, 1000); // Check every second
+  }
+
+  /**
+   * Handles YouTube player state changes
+   * Updates UI and manages behavior based on player state
+   * @param {Object} event - YouTube player state change event
+   */
+  function onPlayerStateChange(event) {
+    // If video ends, reset to beginning
+    if (event.data === YT.PlayerState.ENDED) {
+      if (hasStarted) {
+        player.seekTo(0);
+        isPaused = true;
+        updatePlayPauseButton();
+      }
+    }
+    
+    // Update button state based on player state
+    if (hasStarted) {
+      isPaused = event.data === YT.PlayerState.PAUSED;
+      updatePlayPauseButton();
+    }
+  }
+
+  /**
+   * Updates play/pause button appearance based on player state
+   * Shows appropriate icon (play or pause) depending on video state
+   */
+  function updatePlayPauseButton() {
+    if (!hasStarted) {
+      // Before first interaction: always show play button
+      playIcon.style.display = 'block';
+      pauseIcon.style.display = 'none';
+    } else {
+      // After first interaction: toggle based on player state
+      playIcon.style.display = isPaused ? 'block' : 'none';
+      pauseIcon.style.display = isPaused ? 'none' : 'block';
+    }
+  }
+
+  /**
+   * Play/pause button click handler
+   * Manages first click behavior (unmute) and subsequent play/pause toggling
+   */
+  playPauseButton.onclick = function() {
+    if (!hasStarted) {
+      // First click: restart from beginning with sound
+      player.seekTo(0);
+      player.unMute();
+      hasStarted = true;
+      player.playVideo();
+      playPauseButton.style.opacity = '0';
+      isPaused = false;
+    } else {
+      // Subsequent clicks: toggle play/pause
+      if (isPaused) {
+        player.playVideo();
+      } else {
+        player.pauseVideo();
+      }
+      isPaused = !isPaused;
+    }
+    updatePlayPauseButton();
+  };
+
+  /**
+   * Show play/pause button on mouse enter
+   */
+  videoContainer.addEventListener('mouseenter', function() {
+    if (hasStarted) {
+      playPauseButton.style.opacity = '1';
+    }
+  });
+
+  /**
+   * Hide play/pause button on mouse leave
+   */
+  videoContainer.addEventListener('mouseleave', function() {
+    if (hasStarted) {
+      playPauseButton.style.opacity = '0';
+    }
+  });
+})();
+</script>
