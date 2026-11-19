@@ -131,3 +131,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Uses the [YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
 - Inspired by minimal design principles and user-friendly video interfaces
+
+## Support
+
+If you get some use out of this, you can buy me a coffee on Ko-fi.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/speakerjosh)
